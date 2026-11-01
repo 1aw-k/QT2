@@ -15,7 +15,9 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     replacedialog.cpp \
-    aboutdialog.cpp
+    aboutdialog.cpp \
+    searchservice.cpp \
+    textfileservice.cpp
 
 HEADERS += \
     aboutdialog.h \
@@ -23,7 +25,9 @@ HEADERS += \
     codeeditor.h \
     finddialog.h \
     mainwindow.h \
-    replacedialog.h
+    replacedialog.h \
+    searchservice.h \
+    textfileservice.h
 
 FORMS += \
     aboutdialog.ui \

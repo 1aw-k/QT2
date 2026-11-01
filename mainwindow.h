@@ -36,35 +36,35 @@ private slots:
     void findText(const QString &text, bool caseSensitive, bool backward);
     void replaceText(const QString &text, const QString &replacement,
                      bool caseSensitive, bool backward);
-    void replaceAllText(const QString &text, const QString &replacement,
+    void substituteEverywhere(const QString &text, const QString &replacement,
                         bool caseSensitive);
-    void chooseFont();
-    void chooseTextColor();
-    void chooseTextBackground();
-    void chooseEditorBackground();
-    void updateWindowTitle();
-    void updateStatusBar();
-    void updateActionStates();
-    void autoSave();
+    void pickEditorFont();
+    void pickForegroundColor();
+    void pickTextFillColor();
+    void pickCanvasColor();
+    void refreshWindowTitle();
+    void refreshStatusMetrics();
+    void refreshActionAvailability();
+    void persistSnapshot();
 
 private:
     bool maybeSave();
-    bool loadFile(const QString &filePath);
-    bool writeFile(const QString &filePath, bool showError);
-    bool findNextInEditor(const QString &text, bool caseSensitive, bool backward);
-    void applyTextFormat(const QTextCharFormat &format);
-    void setCurrentFilePath(const QString &filePath);
+    bool readDocument(const QString &filePath);
+    bool storeDocument(const QString &filePath, bool showError);
+    bool seekNextMatch(const QString &text, bool caseSensitive, bool backward);
+    void mergeTextFormat(const QTextCharFormat &format);
+    void assignDocumentPath(const QString &filePath);
     void setupConnections();
-    void setupIconsAndView();
-    QString displayName() const;
+    void configureActionsAndAppearance();
+    QString currentDocumentLabel() const;
 
     Ui::MainWindow *ui;
-    FindDialog *m_findDialog;
-    ReplaceDialog *m_replaceDialog;
-    QLabel *m_statusBarIconLabel;
-    QLabel *m_statusInfoLabel;
-    QLabel *m_statusEncodingLabel;
-    QTimer *m_autoSaveTimer;
-    QString m_currentFilePath;
+    FindDialog *m_searchPanel;
+    ReplaceDialog *m_substitutionPanel;
+    QLabel *m_stateGlyph;
+    QLabel *m_metricsLabel;
+    QLabel *m_encodingLabel;
+    QTimer *m_snapshotTimer;
+    QString m_documentPath;
 };
 #endif // MAINWINDOW_H

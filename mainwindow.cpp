@@ -3,6 +3,8 @@
 #include "aboutdialog.h"
 #include "finddialog.h"
 #include "replacedialog.h"
+#include "searchservice.h"
+#include "textfileservice.h"
 #include "ui_mainwindow.h"
 
 #include <QAbstractButton>
@@ -11,7 +13,6 @@
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QColorDialog>
-#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDialog>
@@ -24,14 +25,11 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
-#include <QSaveFile>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTextCharFormat>
-#include <QTextCodec>
 #include <QTextCursor>
 #include <QTextDocument>
-#include <QTextStream>
 #include <QTimer>
 #include <QToolBar>
 
@@ -161,59 +159,67 @@ QIcon editorBackgroundIcon(const QColor &color)
     return QIcon(pixmap);
 }
 
+template <typename Handler>
+void bindEditorAction(QAction *action,
+                      QPlainTextEdit *editor,
+                      Handler handler)
+{
+    QObject::connect(action, &QAction::triggered, editor, handler);
+}
+
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , m_findDialog(nullptr)
-    , m_replaceDialog(nullptr)
-    , m_statusBarIconLabel(nullptr)
-    , m_statusInfoLabel(nullptr)
-    , m_statusEncodingLabel(nullptr)
-    , m_autoSaveTimer(new QTimer(this))
+    , m_searchPanel(nullptr)
+    , m_substitutionPanel(nullptr)
+    , m_stateGlyph(nullptr)
+    , m_metricsLabel(nullptr)
+    , m_encodingLabel(nullptr)
+    , m_snapshotTimer(new QTimer(this))
 {
     ui->setupUi(this);
     setWindowIcon(AppIcons::applicationIcon());
 
     setupConnections();
-    setupIconsAndView();
+    configureActionsAndAppearance();
 
-    m_findDialog = new FindDialog(this);
-    m_replaceDialog = new ReplaceDialog(this);
-    connect(m_findDialog, &FindDialog::findRequested,
+    m_searchPanel = new FindDialog(this);
+    m_substitutionPanel = new ReplaceDialog(this);
+    connect(m_searchPanel, &FindDialog::findRequested,
             this, &MainWindow::findText);
-    connect(m_replaceDialog, &ReplaceDialog::findRequested,
+    connect(m_substitutionPanel, &ReplaceDialog::findRequested,
             this, &MainWindow::findText);
-    connect(m_replaceDialog, &ReplaceDialog::replaceRequested,
+    connect(m_substitutionPanel, &ReplaceDialog::replaceRequested,
             this, &MainWindow::replaceText);
-    connect(m_replaceDialog, &ReplaceDialog::replaceAllRequested,
-            this, &MainWindow::replaceAllText);
+    connect(m_substitutionPanel, &ReplaceDialog::replaceAllRequested,
+            this, &MainWindow::substituteEverywhere);
 
-    m_statusBarIconLabel = new QLabel(this);
-    m_statusBarIconLabel->setPixmap(
+    m_stateGlyph = new QLabel(this);
+    m_stateGlyph->setPixmap(
         AppIcons::statusBarVisibilityIcon().pixmap(16, 16));
-    m_statusBarIconLabel->setFixedSize(20, 16);
-    m_statusBarIconLabel->setAlignment(Qt::AlignCenter);
-    m_statusBarIconLabel->setContentsMargins(0, 0, 4, 0);
-    m_statusBarIconLabel->setToolTip(tr("状态栏"));
-    statusBar()->addWidget(m_statusBarIconLabel);
+    m_stateGlyph->setFixedSize(20, 16);
+    m_stateGlyph->setAlignment(Qt::AlignCenter);
+    m_stateGlyph->setContentsMargins(0, 0, 4, 0);
+    m_stateGlyph->setToolTip(tr("状态栏"));
+    statusBar()->addWidget(m_stateGlyph);
     statusBar()->setSizeGripEnabled(false);
 
-    m_statusInfoLabel = new QLabel(this);
-    m_statusEncodingLabel = new QLabel(tr("UTF-8"), this);
-    statusBar()->addPermanentWidget(m_statusInfoLabel);
-    statusBar()->addPermanentWidget(m_statusEncodingLabel);
+    m_metricsLabel = new QLabel(this);
+    m_encodingLabel = new QLabel(tr("UTF-8"), this);
+    statusBar()->addPermanentWidget(m_metricsLabel);
+    statusBar()->addPermanentWidget(m_encodingLabel);
 
-    m_autoSaveTimer->setInterval(60 * 1000);
-    connect(m_autoSaveTimer, &QTimer::timeout,
-            this, &MainWindow::autoSave);
-    m_autoSaveTimer->start();
+    m_snapshotTimer->setInterval(60 * 1000);
+    connect(m_snapshotTimer, &QTimer::timeout,
+            this, &MainWindow::persistSnapshot);
+    m_snapshotTimer->start();
 
-    setCurrentFilePath(QString());
-    updateWindowTitle();
-    updateStatusBar();
-    updateActionStates();
+    assignDocumentPath(QString());
+    refreshWindowTitle();
+    refreshStatusMetrics();
+    refreshActionAvailability();
     ui->editor->setFocus();
 }
 
@@ -238,10 +244,10 @@ void MainWindow::newFile()
     ui->editor->clear();
     ui->editor->document()->clearUndoRedoStacks();
     ui->editor->document()->setModified(false);
-    setCurrentFilePath(QString());
-    updateWindowTitle();
-    updateStatusBar();
-    updateActionStates();
+    assignDocumentPath(QString());
+    refreshWindowTitle();
+    refreshStatusMetrics();
+    refreshActionAvailability();
     statusBar()->showMessage(tr("已新建文件"), 2000);
 }
 
@@ -254,20 +260,20 @@ void MainWindow::openFile()
         this, tr("打开文件"), QString(),
         tr("文本文件 (*.txt *.md *.cpp *.h *.json *.xml);;所有文件 (*.*)"));
     if (!filePath.isEmpty())
-        loadFile(filePath);
+        readDocument(filePath);
 }
 
 bool MainWindow::saveFile()
 {
-    if (m_currentFilePath.isEmpty())
+    if (m_documentPath.isEmpty())
         return saveAs();
 
-    if (!writeFile(m_currentFilePath, true))
+    if (!storeDocument(m_documentPath, true))
         return false;
 
     ui->editor->document()->setModified(false);
-    updateWindowTitle();
-    updateActionStates();
+    refreshWindowTitle();
+    refreshActionAvailability();
     statusBar()->showMessage(tr("文件已保存"), 2500);
     return true;
 }
@@ -275,18 +281,18 @@ bool MainWindow::saveFile()
 bool MainWindow::saveAs()
 {
     const QString filePath = QFileDialog::getSaveFileName(
-        this, tr("另存为"), m_currentFilePath,
+        this, tr("另存为"), m_documentPath,
         tr("文本文件 (*.txt);;所有文件 (*.*)"));
     if (filePath.isEmpty())
         return false;
 
-    if (!writeFile(filePath, true))
+    if (!storeDocument(filePath, true))
         return false;
 
-    setCurrentFilePath(filePath);
+    assignDocumentPath(filePath);
     ui->editor->document()->setModified(false);
-    updateWindowTitle();
-    updateActionStates();
+    refreshWindowTitle();
+    refreshActionAvailability();
     statusBar()->showMessage(tr("文件已保存"), 2500);
     return true;
 }
@@ -296,12 +302,12 @@ void MainWindow::showFindDialog()
     const QTextCursor cursor = ui->editor->textCursor();
     const QString selectedText = cursor.selectedText();
     if (!selectedText.isEmpty() && !selectedText.contains(QChar::ParagraphSeparator))
-        m_findDialog->setSearchText(selectedText);
+        m_searchPanel->setSearchText(selectedText);
 
-    m_findDialog->show();
-    m_findDialog->raise();
-    m_findDialog->activateWindow();
-    m_findDialog->focusSearchField();
+    m_searchPanel->show();
+    m_searchPanel->raise();
+    m_searchPanel->activateWindow();
+    m_searchPanel->focusSearchField();
 }
 
 void MainWindow::showReplaceDialog()
@@ -309,12 +315,12 @@ void MainWindow::showReplaceDialog()
     const QTextCursor cursor = ui->editor->textCursor();
     const QString selectedText = cursor.selectedText();
     if (!selectedText.isEmpty() && !selectedText.contains(QChar::ParagraphSeparator))
-        m_replaceDialog->setSearchText(selectedText);
+        m_substitutionPanel->setSearchText(selectedText);
 
-    m_replaceDialog->show();
-    m_replaceDialog->raise();
-    m_replaceDialog->activateWindow();
-    m_replaceDialog->focusSearchField();
+    m_substitutionPanel->show();
+    m_substitutionPanel->raise();
+    m_substitutionPanel->activateWindow();
+    m_substitutionPanel->focusSearchField();
 }
 
 void MainWindow::showAboutDialog()
@@ -325,7 +331,7 @@ void MainWindow::showAboutDialog()
 
 void MainWindow::findText(const QString &text, bool caseSensitive, bool backward)
 {
-    if (findNextInEditor(text, caseSensitive, backward))
+    if (seekNextMatch(text, caseSensitive, backward))
         return;
 
     QMessageBox::information(this, tr("查找"),
@@ -335,7 +341,7 @@ void MainWindow::findText(const QString &text, bool caseSensitive, bool backward
 void MainWindow::replaceText(const QString &text, const QString &replacement,
                              bool caseSensitive, bool backward)
 {
-    if (!findNextInEditor(text, caseSensitive, backward)) {
+    if (!seekNextMatch(text, caseSensitive, backward)) {
         QMessageBox::information(this, tr("替换"),
                                  tr("未找到“%1”。").arg(text));
         return;
@@ -348,26 +354,11 @@ void MainWindow::replaceText(const QString &text, const QString &replacement,
     statusBar()->showMessage(tr("已替换 1 处"), 2000);
 }
 
-void MainWindow::replaceAllText(const QString &text, const QString &replacement,
+void MainWindow::substituteEverywhere(const QString &text, const QString &replacement,
                                 bool caseSensitive)
 {
-    QTextDocument::FindFlags flags;
-    if (caseSensitive)
-        flags |= QTextDocument::FindCaseSensitively;
-
-    QTextCursor cursor(ui->editor->document());
-    cursor.beginEditBlock();
-    int count = 0;
-    while (true) {
-        QTextCursor found = ui->editor->document()->find(text, cursor, flags);
-        if (found.isNull())
-            break;
-
-        found.insertText(replacement);
-        cursor = found;
-        ++count;
-    }
-    cursor.endEditBlock();
+    const int count = SearchService::substituteAll(
+        ui->editor->document(), text, replacement, caseSensitive);
 
     if (count == 0) {
         QMessageBox::information(this, tr("替换全部"),
@@ -375,12 +366,11 @@ void MainWindow::replaceAllText(const QString &text, const QString &replacement,
         return;
     }
 
-    ui->editor->setTextCursor(cursor);
     ui->editor->setFocus();
     statusBar()->showMessage(tr("已替换 %1 处").arg(count), 3000);
 }
 
-void MainWindow::chooseFont()
+void MainWindow::pickEditorFont()
 {
     bool accepted = false;
     const QFont selectedFont = QFontDialog::getFont(
@@ -390,11 +380,11 @@ void MainWindow::chooseFont()
 
     QTextCharFormat format;
     format.setFont(selectedFont);
-    applyTextFormat(format);
+    mergeTextFormat(format);
     statusBar()->showMessage(tr("字体已更新"), 2000);
 }
 
-void MainWindow::chooseTextColor()
+void MainWindow::pickForegroundColor()
 {
     const QColor color = QColorDialog::getColor(
         ui->editor->palette().color(QPalette::Text),
@@ -404,11 +394,11 @@ void MainWindow::chooseTextColor()
 
     QTextCharFormat format;
     format.setForeground(color);
-    applyTextFormat(format);
+    mergeTextFormat(format);
     statusBar()->showMessage(tr("字体颜色已更新"), 2000);
 }
 
-void MainWindow::chooseTextBackground()
+void MainWindow::pickTextFillColor()
 {
     const QBrush currentBackground =
         ui->editor->textCursor().charFormat().background();
@@ -425,7 +415,7 @@ void MainWindow::chooseTextBackground()
     const bool appliesToSelection = ui->editor->textCursor().hasSelection();
     QTextCharFormat format;
     format.setBackground(color);
-    applyTextFormat(format);
+    mergeTextFormat(format);
 
     if (appliesToSelection) {
         QTextCursor cursor = ui->editor->textCursor();
@@ -441,7 +431,7 @@ void MainWindow::chooseTextBackground()
         2500);
 }
 
-void MainWindow::chooseEditorBackground()
+void MainWindow::pickCanvasColor()
 {
     const QColor color = QColorDialog::getColor(
         ui->editor->palette().color(QPalette::Base), this, tr("选择编辑器背景色"));
@@ -458,19 +448,19 @@ void MainWindow::chooseEditorBackground()
     statusBar()->showMessage(tr("编辑器背景色已更新"), 2000);
 }
 
-void MainWindow::updateWindowTitle()
+void MainWindow::refreshWindowTitle()
 {
     const QString modifiedMark =
         ui->editor->document()->isModified()
             ? QStringLiteral("* ")
             : QString();
 
-    setWindowTitle(modifiedMark + displayName() + tr(" - 编辑器"));
+    setWindowTitle(modifiedMark + currentDocumentLabel() + tr(" - 编辑器"));
 }
 
-void MainWindow::updateStatusBar()
+void MainWindow::refreshStatusMetrics()
 {
-    if (!m_statusInfoLabel)
+    if (!m_metricsLabel)
         return;
 
     const QTextCursor cursor = ui->editor->textCursor();
@@ -479,7 +469,7 @@ void MainWindow::updateStatusBar()
     const int line = cursor.blockNumber() + 1;
     const int column = cursor.positionInBlock() + 1;
 
-    m_statusInfoLabel->setText(
+    m_metricsLabel->setText(
         tr("length: %1    lines: %2    Ln: %3    Col: %4")
             .arg(length)
             .arg(lines)
@@ -487,7 +477,7 @@ void MainWindow::updateStatusBar()
             .arg(column));
 }
 
-void MainWindow::updateActionStates()
+void MainWindow::refreshActionAvailability()
 {
     QTextDocument *document = ui->editor->document();
     const bool hasSelection = ui->editor->textCursor().hasSelection();
@@ -502,17 +492,17 @@ void MainWindow::updateActionStates()
     ui->actionSelectAll->setEnabled(!document->isEmpty());
 }
 
-void MainWindow::autoSave()
+void MainWindow::persistSnapshot()
 {
-    if (m_currentFilePath.isEmpty()
+    if (m_documentPath.isEmpty()
         || !ui->editor->document()->isModified()) {
         return;
     }
 
-    if (writeFile(m_currentFilePath, false)) {
+    if (storeDocument(m_documentPath, false)) {
         ui->editor->document()->setModified(false);
-        updateWindowTitle();
-        updateActionStates();
+        refreshWindowTitle();
+        refreshActionAvailability();
         statusBar()->showMessage(tr("已自动保存"), 2000);
     }
 }
@@ -523,7 +513,7 @@ bool MainWindow::maybeSave()
         return true;
 
     QMessageBox box(QMessageBox::Warning, tr("未保存的修改"),
-                    tr("“%1”已修改。\n是否保存修改？").arg(displayName()),
+                    tr("“%1”已修改。\n是否保存修改？").arg(currentDocumentLabel()),
                     QMessageBox::NoButton, this);
     QAbstractButton *saveButton = box.addButton(tr("保存"), QMessageBox::AcceptRole);
     QAbstractButton *discardButton = box.addButton(tr("不保存"),
@@ -541,68 +531,50 @@ bool MainWindow::maybeSave()
     return false;
 }
 
-bool MainWindow::loadFile(const QString &filePath)
+bool MainWindow::readDocument(const QString &filePath)
 {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, tr("打开失败"),
-                             tr("无法打开文件：\n%1\n\n%2")
-                                 .arg(filePath, file.errorString()));
-        return false;
-    }
+    const TextFileLoadResult loaded =
+        TextFileService::load(filePath);
 
-    const QByteArray data = file.readAll();
-    if (file.error() != QFileDevice::NoError) {
-        QMessageBox::warning(this, tr("打开失败"),
-                             tr("读取文件时发生错误：\n%1")
-                                 .arg(file.errorString()));
-        return false;
-    }
-
-    if (data.contains('\0')) {
+    if (!loaded.succeeded()) {
+        if (loaded.status ==
+            TextFileLoadResult::Status::BinaryContent) {
         QMessageBox::warning(this, tr("无法作为文本打开"),
                              tr("所选文件可能是二进制文件，无法安全地作为文本打开。"));
+        } else {
+            QMessageBox::warning(
+                this, tr("打开失败"),
+                tr("无法读取文件：\n%1\n\n%2")
+                    .arg(filePath, loaded.error));
+        }
         return false;
     }
 
-    QTextCodec *fallbackCodec = QTextCodec::codecForName("UTF-8");
-    QTextCodec *codec = QTextCodec::codecForUtfText(data, fallbackCodec);
-    const QString text = codec ? codec->toUnicode(data) : QString::fromUtf8(data);
-
-    ui->editor->setPlainText(text);
+    ui->editor->setPlainText(loaded.text);
     ui->editor->document()->clearUndoRedoStacks();
     ui->editor->document()->setModified(false);
     QTextCursor cursor = ui->editor->textCursor();
     cursor.movePosition(QTextCursor::Start);
     ui->editor->setTextCursor(cursor);
 
-    setCurrentFilePath(filePath);
-    updateWindowTitle();
-    updateStatusBar();
-    updateActionStates();
+    assignDocumentPath(filePath);
+    refreshWindowTitle();
+    refreshStatusMetrics();
+    refreshActionAvailability();
     statusBar()->showMessage(tr("已打开 %1").arg(QFileInfo(filePath).fileName()), 3000);
     ui->editor->setFocus();
     return true;
 }
 
-bool MainWindow::writeFile(const QString &filePath, bool showError)
+bool MainWindow::storeDocument(const QString &filePath, bool showError)
 {
-    QSaveFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly)) {
+    QString errorMessage;
+    if (!TextFileService::store(
+            filePath, ui->editor->toPlainText(), &errorMessage)) {
         if (showError) {
             QMessageBox::warning(this, tr("保存失败"),
-                                 tr("无法写入文件：\n%1\n\n%2")
-                                     .arg(filePath, file.errorString()));
-        }
-        return false;
-    }
-
-    const QByteArray data = ui->editor->toPlainText().toUtf8();
-    if (file.write(data) != data.size() || !file.commit()) {
-        if (showError) {
-            QMessageBox::warning(this, tr("保存失败"),
-                                 tr("保存文件时发生错误：\n%1")
-                                     .arg(file.errorString()));
+                                 tr("无法保存文件：\n%1\n\n%2")
+                                     .arg(filePath, errorMessage));
         }
         return false;
     }
@@ -610,33 +582,17 @@ bool MainWindow::writeFile(const QString &filePath, bool showError)
     return true;
 }
 
-bool MainWindow::findNextInEditor(const QString &text, bool caseSensitive,
+bool MainWindow::seekNextMatch(const QString &text, bool caseSensitive,
                                   bool backward)
 {
-    if (text.isEmpty())
-        return false;
+    SearchSpecification specification;
+    specification.needle = text;
+    specification.caseSensitive = caseSensitive;
+    specification.reverse = backward;
 
-    QTextDocument::FindFlags flags;
-    if (caseSensitive)
-        flags |= QTextDocument::FindCaseSensitively;
-    if (backward)
-        flags |= QTextDocument::FindBackward;
-
-    QTextCursor searchCursor = ui->editor->textCursor();
-    if (searchCursor.hasSelection()) {
-        searchCursor.setPosition(backward ? searchCursor.selectionStart()
-                                          : searchCursor.selectionEnd());
-    }
-
-    QTextCursor found = ui->editor->document()->find(text, searchCursor, flags);
-
-    if (found.isNull()) {
-        QTextCursor wrapCursor(ui->editor->document());
-        wrapCursor.movePosition(backward ? QTextCursor::End
-                                         : QTextCursor::Start);
-        found = ui->editor->document()->find(text, wrapCursor, flags);
-    }
-
+    const QTextCursor found = SearchService::seekNext(
+        ui->editor->document(), ui->editor->textCursor(),
+        specification);
     if (found.isNull())
         return false;
 
@@ -646,7 +602,7 @@ bool MainWindow::findNextInEditor(const QString &text, bool caseSensitive,
     return true;
 }
 
-void MainWindow::applyTextFormat(const QTextCharFormat &format)
+void MainWindow::mergeTextFormat(const QTextCharFormat &format)
 {
     QTextCursor cursor = ui->editor->textCursor();
     const int originalPosition = cursor.position();
@@ -668,9 +624,9 @@ void MainWindow::applyTextFormat(const QTextCharFormat &format)
     ui->editor->setFocus();
 }
 
-void MainWindow::setCurrentFilePath(const QString &filePath)
+void MainWindow::assignDocumentPath(const QString &filePath)
 {
-    m_currentFilePath = filePath;
+    m_documentPath = filePath;
 
     if (filePath.isEmpty())
         setWindowFilePath(QString());
@@ -691,31 +647,31 @@ void MainWindow::setupConnections()
     connect(ui->actionExit, &QAction::triggered,
             this, &QWidget::close);
 
-    connect(ui->actionUndo, &QAction::triggered,
-            ui->editor, &QPlainTextEdit::undo);
-    connect(ui->actionRedo, &QAction::triggered,
-            ui->editor, &QPlainTextEdit::redo);
-    connect(ui->actionCut, &QAction::triggered,
-            ui->editor, &QPlainTextEdit::cut);
-    connect(ui->actionCopy, &QAction::triggered,
-            ui->editor, &QPlainTextEdit::copy);
-    connect(ui->actionPaste, &QAction::triggered,
-            ui->editor, &QPlainTextEdit::paste);
-    connect(ui->actionSelectAll, &QAction::triggered,
-            ui->editor, &QPlainTextEdit::selectAll);
+    bindEditorAction(ui->actionUndo, ui->editor,
+                     &QPlainTextEdit::undo);
+    bindEditorAction(ui->actionRedo, ui->editor,
+                     &QPlainTextEdit::redo);
+    bindEditorAction(ui->actionCut, ui->editor,
+                     &QPlainTextEdit::cut);
+    bindEditorAction(ui->actionCopy, ui->editor,
+                     &QPlainTextEdit::copy);
+    bindEditorAction(ui->actionPaste, ui->editor,
+                     &QPlainTextEdit::paste);
+    bindEditorAction(ui->actionSelectAll, ui->editor,
+                     &QPlainTextEdit::selectAll);
     connect(ui->actionFind, &QAction::triggered,
             this, &MainWindow::showFindDialog);
     connect(ui->actionReplace, &QAction::triggered,
             this, &MainWindow::showReplaceDialog);
 
     connect(ui->actionFont, &QAction::triggered,
-            this, &MainWindow::chooseFont);
+            this, &MainWindow::pickEditorFont);
     connect(ui->actionTextColor, &QAction::triggered,
-            this, &MainWindow::chooseTextColor);
+            this, &MainWindow::pickForegroundColor);
     connect(ui->actionTextBackground, &QAction::triggered,
-            this, &MainWindow::chooseTextBackground);
+            this, &MainWindow::pickTextFillColor);
     connect(ui->actionEditorBackground, &QAction::triggered,
-            this, &MainWindow::chooseEditorBackground);
+            this, &MainWindow::pickCanvasColor);
 
     connect(ui->actionWordWrap, &QAction::toggled,
             this, [this](bool enabled) {
@@ -733,22 +689,22 @@ void MainWindow::setupConnections()
             this, &MainWindow::showAboutDialog);
 
     connect(ui->editor->document(), &QTextDocument::modificationChanged,
-            this, &MainWindow::updateWindowTitle);
+            this, &MainWindow::refreshWindowTitle);
     connect(ui->editor->document(), &QTextDocument::undoAvailable,
-            this, &MainWindow::updateActionStates);
+            this, &MainWindow::refreshActionAvailability);
     connect(ui->editor->document(), &QTextDocument::redoAvailable,
-            this, &MainWindow::updateActionStates);
+            this, &MainWindow::refreshActionAvailability);
     connect(ui->editor, &QPlainTextEdit::copyAvailable,
-            this, &MainWindow::updateActionStates);
+            this, &MainWindow::refreshActionAvailability);
     connect(ui->editor, &QPlainTextEdit::textChanged,
-            this, &MainWindow::updateActionStates);
+            this, &MainWindow::refreshActionAvailability);
     connect(ui->editor, &QPlainTextEdit::cursorPositionChanged,
-            this, &MainWindow::updateStatusBar);
+            this, &MainWindow::refreshStatusMetrics);
     connect(QApplication::clipboard(), &QClipboard::dataChanged,
-            this, &MainWindow::updateActionStates);
+            this, &MainWindow::refreshActionAvailability);
 }
 
-void MainWindow::setupIconsAndView()
+void MainWindow::configureActionsAndAppearance()
 {
     QStyle *windowStyle = style();
     ui->actionNew->setIcon(AppIcons::newDocumentIcon());
@@ -777,7 +733,7 @@ void MainWindow::setupIconsAndView()
     ui->actionStatusBar->setIcon(AppIcons::statusBarVisibilityIcon());
     ui->actionAbout->setIcon(AppIcons::applicationIcon());
 
-    ui->mainToolBar->setIconSize(QSize(20, 20));
+    ui->mainToolBar->setIconSize(QSize(22, 22));
     ui->editor->setLineWrapMode(ui->actionWordWrap->isChecked()
                                     ? QPlainTextEdit::WidgetWidth
                                     : QPlainTextEdit::NoWrap);
@@ -786,10 +742,10 @@ void MainWindow::setupIconsAndView()
     statusBar()->setVisible(ui->actionStatusBar->isChecked());
 }
 
-QString MainWindow::displayName() const
+QString MainWindow::currentDocumentLabel() const
 {
-    if (m_currentFilePath.isEmpty())
+    if (m_documentPath.isEmpty())
         return tr("新建文本文件");
 
-    return QFileInfo(m_currentFilePath).fileName();
+    return QFileInfo(m_documentPath).fileName();
 }
