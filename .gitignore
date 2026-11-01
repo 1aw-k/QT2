@@ -66,6 +66,11 @@ Thumbs.db
 # qmake build output
 /build/
 
+# Local experiment notes and screenshots
+/qt.txt
+/qttxt.txt
+/docs/*.png
+
 # Python byte code
 *.pyc
 
