@@ -79,6 +79,46 @@ void drawNotebook(QPainter &painter)
                         << QPointF(32, 51));
 }
 
+void drawNewDocument(QPainter &painter)
+{
+    painter.setPen(QPen(QColor("#64717d"), 1.8, Qt::SolidLine,
+                        Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(QColor("#f5f7f9"));
+    painter.drawRoundedRect(QRectF(15, 7, 34, 50), 3, 3);
+
+    painter.setBrush(QColor("#d4dce5"));
+    painter.drawPolygon(QPolygonF()
+                        << QPointF(39, 7)
+                        << QPointF(39, 18)
+                        << QPointF(49, 18));
+
+    painter.setPen(QPen(QColor("#91a0ad"), 1.4));
+    painter.drawLine(21, 25, 42, 25);
+    painter.drawLine(21, 31, 42, 31);
+    painter.drawLine(21, 37, 37, 37);
+}
+
+void drawOpenDocument(QPainter &painter)
+{
+    painter.setPen(QPen(QColor("#9b7216"), 1.6, Qt::SolidLine,
+                        Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(QColor("#d9a62c"));
+    painter.drawRoundedRect(QRectF(7, 19, 50, 34), 4, 4);
+
+    painter.setBrush(QColor("#efc44e"));
+    painter.drawPolygon(QPolygonF()
+                        << QPointF(8, 24)
+                        << QPointF(25, 24)
+                        << QPointF(31, 30)
+                        << QPointF(55, 30)
+                        << QPointF(49, 51)
+                        << QPointF(15, 51));
+
+    painter.setPen(QPen(QColor("#fff1b7"), 1.4));
+    painter.drawLine(18, 35, 44, 35);
+    painter.drawLine(17, 41, 40, 41);
+}
+
 void drawSave(QPainter &painter)
 {
     painter.setPen(QPen(QColor("#344bb2"), 1.8, Qt::SolidLine,
@@ -177,6 +217,16 @@ namespace AppIcons {
 QIcon applicationIcon()
 {
     return renderIcon(drawNotebook);
+}
+
+QIcon newDocumentIcon()
+{
+    return renderIcon(drawNewDocument);
+}
+
+QIcon openDocumentIcon()
+{
+    return renderIcon(drawOpenDocument);
 }
 
 QIcon saveIcon()

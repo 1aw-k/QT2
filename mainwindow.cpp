@@ -747,8 +747,8 @@ void MainWindow::setupConnections()
 void MainWindow::setupIconsAndView()
 {
     QStyle *windowStyle = style();
-    ui->actionNew->setIcon(windowStyle->standardIcon(QStyle::SP_FileIcon));
-    ui->actionOpen->setIcon(windowStyle->standardIcon(QStyle::SP_DialogOpenButton));
+    ui->actionNew->setIcon(AppIcons::newDocumentIcon());
+    ui->actionOpen->setIcon(AppIcons::openDocumentIcon());
     ui->actionSave->setIcon(AppIcons::saveIcon());
     ui->actionSaveAs->setIcon(AppIcons::saveAsIcon());
     ui->actionUndo->setIcon(windowStyle->standardIcon(QStyle::SP_ArrowBack));

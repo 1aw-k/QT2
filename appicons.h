@@ -6,6 +6,8 @@
 namespace AppIcons {
 
 QIcon applicationIcon();
+QIcon newDocumentIcon();
+QIcon openDocumentIcon();
 QIcon saveIcon();
 QIcon saveAsIcon();
 QIcon toolBarVisibilityIcon();
