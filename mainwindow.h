@@ -61,6 +61,7 @@ private:
     Ui::MainWindow *ui;
     FindDialog *m_findDialog;
     ReplaceDialog *m_replaceDialog;
+    QLabel *m_statusBarIconLabel;
     QLabel *m_statusInfoLabel;
     QLabel *m_statusEncodingLabel;
     QTimer *m_autoSaveTimer;

@@ -1,18 +1,16 @@
 #include "aboutdialog.h"
+#include "appicons.h"
 #include "ui_aboutdialog.h"
-
-#include <QApplication>
-#include <QStyle>
 
 AboutDialog::AboutDialog(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::AboutDialog)
 {
     ui->setupUi(this);
+    setWindowIcon(AppIcons::applicationIcon());
 
-    QPixmap icon = QApplication::style()->standardIcon(QStyle::SP_FileIcon)
-                       .pixmap(96, 96);
-    ui->iconLabel->setPixmap(icon);
+    ui->iconLabel->setPixmap(
+        AppIcons::applicationIcon().pixmap(140, 140));
     ui->iconLabel->setAlignment(Qt::AlignCenter);
 
     connect(ui->okButton, &QPushButton::clicked,

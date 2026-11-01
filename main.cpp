@@ -1,14 +1,14 @@
+#include "appicons.h"
 #include "mainwindow.h"
 
 #include <QApplication>
-#include <QStyle>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    a.setApplicationName(QStringLiteral("简单文本编辑器"));
+    a.setApplicationName(QStringLiteral("小牛文本编辑器"));
     a.setApplicationVersion(QStringLiteral("1.0"));
-    a.setWindowIcon(a.style()->standardIcon(QStyle::SP_FileIcon));
+    a.setWindowIcon(AppIcons::applicationIcon());
 
     MainWindow w;
     w.show();

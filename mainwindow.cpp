@@ -1,3 +1,4 @@
+#include "appicons.h"
 #include "mainwindow.h"
 #include "aboutdialog.h"
 #include "finddialog.h"
@@ -167,11 +168,13 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , m_findDialog(nullptr)
     , m_replaceDialog(nullptr)
+    , m_statusBarIconLabel(nullptr)
     , m_statusInfoLabel(nullptr)
     , m_statusEncodingLabel(nullptr)
     , m_autoSaveTimer(new QTimer(this))
 {
     ui->setupUi(this);
+    setWindowIcon(AppIcons::applicationIcon());
 
     setupConnections();
     setupIconsAndView();
@@ -186,6 +189,12 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::replaceText);
     connect(m_replaceDialog, &ReplaceDialog::replaceAllRequested,
             this, &MainWindow::replaceAllText);
+
+    m_statusBarIconLabel = new QLabel(this);
+    m_statusBarIconLabel->setPixmap(
+        AppIcons::statusBarVisibilityIcon().pixmap(16, 16));
+    m_statusBarIconLabel->setToolTip(tr("状态栏"));
+    statusBar()->addWidget(m_statusBarIconLabel);
 
     m_statusInfoLabel = new QLabel(this);
     m_statusEncodingLabel = new QLabel(tr("UTF-8"), this);
@@ -447,8 +456,12 @@ void MainWindow::chooseEditorBackground()
 
 void MainWindow::updateWindowTitle()
 {
-    setWindowTitle(tr("%1[*] - 简单文本编辑器").arg(displayName()));
-    setWindowModified(ui->editor->document()->isModified());
+    const QString modifiedMark =
+        ui->editor->document()->isModified()
+            ? QStringLiteral("* ")
+            : QString();
+
+    setWindowTitle(modifiedMark + displayName() + tr(" - 编辑器"));
 }
 
 void MainWindow::updateStatusBar()
@@ -736,8 +749,8 @@ void MainWindow::setupIconsAndView()
     QStyle *windowStyle = style();
     ui->actionNew->setIcon(windowStyle->standardIcon(QStyle::SP_FileIcon));
     ui->actionOpen->setIcon(windowStyle->standardIcon(QStyle::SP_DialogOpenButton));
-    ui->actionSave->setIcon(windowStyle->standardIcon(QStyle::SP_DialogSaveButton));
-    ui->actionSaveAs->setIcon(windowStyle->standardIcon(QStyle::SP_DialogSaveButton));
+    ui->actionSave->setIcon(AppIcons::saveIcon());
+    ui->actionSaveAs->setIcon(AppIcons::saveAsIcon());
     ui->actionUndo->setIcon(windowStyle->standardIcon(QStyle::SP_ArrowBack));
     ui->actionRedo->setIcon(windowStyle->standardIcon(QStyle::SP_ArrowForward));
     ui->actionRedo->setShortcuts(QList<QKeySequence>()
@@ -756,7 +769,9 @@ void MainWindow::setupIconsAndView()
     ui->actionTextBackground->setIcon(colorLetterIcon(
         palette().color(QPalette::WindowText), QColor("#f6d55c"), true));
     ui->actionEditorBackground->setIcon(editorBackgroundIcon(QColor("#dff1f8")));
-    ui->actionAbout->setIcon(windowStyle->standardIcon(QStyle::SP_MessageBoxInformation));
+    ui->actionToolBar->setIcon(AppIcons::toolBarVisibilityIcon());
+    ui->actionStatusBar->setIcon(AppIcons::statusBarVisibilityIcon());
+    ui->actionAbout->setIcon(AppIcons::applicationIcon());
 
     ui->mainToolBar->setIconSize(QSize(20, 20));
     ui->editor->setLineWrapMode(ui->actionWordWrap->isChecked()
