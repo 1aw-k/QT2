@@ -176,7 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_substitutionPanel(nullptr)
     , m_stateGlyph(nullptr)
     , m_metricsLabel(nullptr)
-    , m_encodingLabel(nullptr)
+    , m_identityLabel(nullptr)
     , m_snapshotTimer(new QTimer(this))
 {
     ui->setupUi(this);
@@ -207,9 +207,9 @@ MainWindow::MainWindow(QWidget *parent)
     statusBar()->setSizeGripEnabled(false);
 
     m_metricsLabel = new QLabel(this);
-    m_encodingLabel = new QLabel(tr("UTF-8"), this);
+    m_identityLabel = new QLabel(tr("陈彤彤"), this);
     statusBar()->addPermanentWidget(m_metricsLabel);
-    statusBar()->addPermanentWidget(m_encodingLabel);
+    statusBar()->addPermanentWidget(m_identityLabel);
 
     m_snapshotTimer->setInterval(60 * 1000);
     connect(m_snapshotTimer, &QTimer::timeout,

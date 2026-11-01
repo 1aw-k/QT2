@@ -63,7 +63,7 @@ private:
     ReplaceDialog *m_substitutionPanel;
     QLabel *m_stateGlyph;
     QLabel *m_metricsLabel;
-    QLabel *m_encodingLabel;
+    QLabel *m_identityLabel;
     QTimer *m_snapshotTimer;
     QString m_documentPath;
 };
