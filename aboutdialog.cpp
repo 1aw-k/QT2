@@ -9,28 +9,28 @@ AboutDialog::AboutDialog(QWidget *parent)
     ui->setupUi(this);
     setWindowIcon(AppIcons::applicationIcon());
 
-    ui->iconLabel->setPixmap(
-        AppIcons::applicationIcon().pixmap(140, 140));
-    ui->iconLabel->setAlignment(Qt::AlignCenter);
+    ui->brandMarkLabel->setPixmap(
+        AppIcons::applicationIcon().pixmap(150, 150));
+    ui->brandMarkLabel->setAlignment(Qt::AlignCenter);
 
-    ui->titleLabel->setAccessibleName(tr("小牛文本编辑器"));
-    ui->developerValueLabel->setAccessibleName(tr("开发者 陈彤彤"));
-    ui->studentIdValueLabel->setAccessibleName(tr("学号 2023426040105"));
-    ui->emailValueLabel->setAccessibleName(
+    ui->productTitleLabel->setAccessibleName(tr("小牛文本编辑器"));
+    ui->authorValueLabel->setAccessibleName(tr("开发者 陈彤彤"));
+    ui->registrationValueLabel->setAccessibleName(tr("学号 2023426040105"));
+    ui->contactValueLabel->setAccessibleName(
         tr("邮箱 272978345@qq.com"));
 
-    ui->developerValueLabel->setTextInteractionFlags(
+    ui->authorValueLabel->setTextInteractionFlags(
         Qt::TextSelectableByMouse);
-    ui->studentIdValueLabel->setTextInteractionFlags(
+    ui->registrationValueLabel->setTextInteractionFlags(
         Qt::TextSelectableByMouse);
-    ui->emailValueLabel->setTextInteractionFlags(
+    ui->contactValueLabel->setTextInteractionFlags(
         Qt::TextSelectableByMouse);
 
-    ui->emailValueLabel->setToolTip(
-        ui->emailValueLabel->text());
-    ui->okButton->setAutoDefault(true);
+    ui->contactValueLabel->setToolTip(
+        ui->contactValueLabel->text());
+    ui->acceptButton->setAutoDefault(true);
 
-    connect(ui->okButton, &QPushButton::clicked,
+    connect(ui->acceptButton, &QPushButton::clicked,
             this, &QDialog::accept);
 }
 

@@ -10,15 +10,15 @@ ReplaceDialog::ReplaceDialog(QWidget *parent)
     ui->setupUi(this);
     setModal(false);
 
-    connect(ui->findNextButton, &QPushButton::clicked,
+    connect(ui->seekButton, &QPushButton::clicked,
             this, &ReplaceDialog::requestFind);
-    connect(ui->replaceButton, &QPushButton::clicked,
+    connect(ui->substituteButton, &QPushButton::clicked,
             this, &ReplaceDialog::requestReplace);
-    connect(ui->replaceAllButton, &QPushButton::clicked,
+    connect(ui->substituteAllButton, &QPushButton::clicked,
             this, &ReplaceDialog::requestReplaceAll);
-    connect(ui->cancelButton, &QPushButton::clicked,
+    connect(ui->dismissButton, &QPushButton::clicked,
             this, &QDialog::hide);
-    connect(ui->searchLineEdit, &QLineEdit::returnPressed,
+    connect(ui->lookupInput, &QLineEdit::returnPressed,
             this, &ReplaceDialog::requestFind);
 }
 
@@ -29,19 +29,19 @@ ReplaceDialog::~ReplaceDialog()
 
 QString ReplaceDialog::searchText() const
 {
-    return ui->searchLineEdit->text();
+    return ui->lookupInput->text();
 }
 
 void ReplaceDialog::setSearchText(const QString &text)
 {
-    ui->searchLineEdit->setText(text);
-    ui->searchLineEdit->selectAll();
+    ui->lookupInput->setText(text);
+    ui->lookupInput->selectAll();
 }
 
 void ReplaceDialog::focusSearchField()
 {
-    ui->searchLineEdit->setFocus();
-    ui->searchLineEdit->selectAll();
+    ui->lookupInput->setFocus();
+    ui->lookupInput->selectAll();
 }
 
 void ReplaceDialog::requestFind()
@@ -49,9 +49,9 @@ void ReplaceDialog::requestFind()
     if (!validateSearchText())
         return;
 
-    emit findRequested(ui->searchLineEdit->text(),
-                       ui->caseSensitiveCheckBox->isChecked(),
-                       ui->upRadioButton->isChecked());
+    emit findRequested(ui->lookupInput->text(),
+                       ui->matchCaseToggle->isChecked(),
+                       ui->reverseDirectionOption->isChecked());
 }
 
 void ReplaceDialog::requestReplace()
@@ -59,10 +59,10 @@ void ReplaceDialog::requestReplace()
     if (!validateSearchText())
         return;
 
-    emit replaceRequested(ui->searchLineEdit->text(),
-                          ui->replaceLineEdit->text(),
-                          ui->caseSensitiveCheckBox->isChecked(),
-                          ui->upRadioButton->isChecked());
+    emit replaceRequested(ui->lookupInput->text(),
+                          ui->substitutionInput->text(),
+                          ui->matchCaseToggle->isChecked(),
+                          ui->reverseDirectionOption->isChecked());
 }
 
 void ReplaceDialog::requestReplaceAll()
@@ -70,17 +70,17 @@ void ReplaceDialog::requestReplaceAll()
     if (!validateSearchText())
         return;
 
-    emit replaceAllRequested(ui->searchLineEdit->text(),
-                             ui->replaceLineEdit->text(),
-                             ui->caseSensitiveCheckBox->isChecked());
+    emit replaceAllRequested(ui->lookupInput->text(),
+                             ui->substitutionInput->text(),
+                             ui->matchCaseToggle->isChecked());
 }
 
 bool ReplaceDialog::validateSearchText()
 {
-    if (!ui->searchLineEdit->text().isEmpty())
+    if (!ui->lookupInput->text().isEmpty())
         return true;
 
     QMessageBox::information(this, tr("替换"), tr("请输入要查找的内容。"));
-    ui->searchLineEdit->setFocus();
+    ui->lookupInput->setFocus();
     return false;
 }

@@ -5,10 +5,10 @@
 
 class CodeEditor;
 
-class LineNumberArea : public QWidget
+class TextGutter : public QWidget
 {
 public:
-    explicit LineNumberArea(CodeEditor *editor);
+    explicit TextGutter(CodeEditor *editor);
 
     QSize sizeHint() const override;
 
@@ -26,8 +26,8 @@ class CodeEditor : public QPlainTextEdit
 public:
     explicit CodeEditor(QWidget *parent = nullptr);
 
-    int lineNumberAreaWidth() const;
-    void lineNumberAreaPaintEvent(QPaintEvent *event);
+    int gutterWidth() const;
+    void paintGutter(QPaintEvent *event);
     void setLineNumbersVisible(bool visible);
     bool lineNumbersVisible() const;
 
@@ -35,13 +35,13 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private slots:
-    void updateLineNumberAreaWidth(int newBlockCount);
-    void updateLineNumberArea(const QRect &rect, int dy);
-    void highlightCurrentLine();
+    void updateTextGutterWidth(int newBlockCount);
+    void updateTextGutter(const QRect &rect, int dy);
+    void applyActiveLineHighlight();
 
 private:
-    QWidget *m_lineNumberArea;
-    bool m_lineNumbersVisible;
+    QWidget *m_gutter;
+    bool m_gutterVisible;
 };
 
 #endif // CODEEDITOR_H

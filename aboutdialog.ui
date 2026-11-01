@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>620</width>
-    <height>390</height>
+    <width>640</width>
+    <height>410</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>600</width>
-    <height>370</height>
+    <width>620</width>
+    <height>390</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -36,7 +36,7 @@
     <number>18</number>
    </property>
    <item>
-    <widget class="QLabel" name="titleLabel">
+    <widget class="QLabel" name="productTitleLabel">
      <property name="font">
       <font>
        <family>宋体</family>
@@ -56,17 +56,17 @@
       <number>34</number>
      </property>
      <item>
-      <widget class="QLabel" name="iconLabel">
+      <widget class="QLabel" name="brandMarkLabel">
        <property name="minimumSize">
         <size>
-         <width>150</width>
-         <height>150</height>
+         <width>160</width>
+         <height>160</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>150</width>
-         <height>150</height>
+         <width>160</width>
+         <height>160</height>
         </size>
        </property>
        <property name="scaledContents">
@@ -98,7 +98,7 @@
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QLabel" name="developerValueLabel">
+        <widget class="QLabel" name="authorValueLabel">
          <property name="font">
           <font>
            <pointsize>11</pointsize>
@@ -122,7 +122,7 @@
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLabel" name="studentIdValueLabel">
+        <widget class="QLabel" name="registrationValueLabel">
          <property name="font">
           <font>
            <pointsize>11</pointsize>
@@ -146,7 +146,7 @@
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QLabel" name="emailValueLabel">
+        <widget class="QLabel" name="contactValueLabel">
          <property name="font">
           <font>
            <pointsize>11</pointsize>
@@ -177,7 +177,7 @@
    <item>
     <layout class="QHBoxLayout" name="footerLayout">
      <item>
-      <widget class="QLabel" name="buildLabel">
+      <widget class="QLabel" name="buildStampLabel">
        <property name="font">
         <font>
          <family>Courier New</family>
@@ -205,7 +205,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="okButton">
+      <widget class="QPushButton" name="acceptButton">
        <property name="minimumSize">
         <size>
          <width>120</width>

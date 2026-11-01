@@ -4,41 +4,41 @@
 #include <QPainter>
 #include <QTextBlock>
 
-LineNumberArea::LineNumberArea(CodeEditor *editor)
+TextGutter::TextGutter(CodeEditor *editor)
     : QWidget(editor)
     , m_editor(editor)
 {
 }
 
-QSize LineNumberArea::sizeHint() const
+QSize TextGutter::sizeHint() const
 {
-    return QSize(m_editor->lineNumberAreaWidth(), 0);
+    return QSize(m_editor->gutterWidth(), 0);
 }
 
-void LineNumberArea::paintEvent(QPaintEvent *event)
+void TextGutter::paintEvent(QPaintEvent *event)
 {
-    m_editor->lineNumberAreaPaintEvent(event);
+    m_editor->paintGutter(event);
 }
 
 CodeEditor::CodeEditor(QWidget *parent)
     : QPlainTextEdit(parent)
-    , m_lineNumberArea(new LineNumberArea(this))
-    , m_lineNumbersVisible(true)
+    , m_gutter(new TextGutter(this))
+    , m_gutterVisible(true)
 {
     connect(this, &CodeEditor::blockCountChanged,
-            this, &CodeEditor::updateLineNumberAreaWidth);
+            this, &CodeEditor::updateTextGutterWidth);
     connect(this, &CodeEditor::updateRequest,
-            this, &CodeEditor::updateLineNumberArea);
+            this, &CodeEditor::updateTextGutter);
     connect(this, &CodeEditor::cursorPositionChanged,
-            this, &CodeEditor::highlightCurrentLine);
+            this, &CodeEditor::applyActiveLineHighlight);
 
-    highlightCurrentLine();
-    updateLineNumberAreaWidth(0);
+    applyActiveLineHighlight();
+    updateTextGutterWidth(0);
 }
 
-int CodeEditor::lineNumberAreaWidth() const
+int CodeEditor::gutterWidth() const
 {
-    if (!m_lineNumbersVisible)
+    if (!m_gutterVisible)
         return 0;
 
     int digits = 1;
@@ -51,9 +51,9 @@ int CodeEditor::lineNumberAreaWidth() const
     return 15 + fontMetrics().horizontalAdvance(QString(digits, QLatin1Char('9')));
 }
 
-void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
+void CodeEditor::paintGutter(QPaintEvent *event)
 {
-    QPainter painter(m_lineNumberArea);
+    QPainter painter(m_gutter);
     painter.fillRect(event->rect(), palette().color(QPalette::AlternateBase));
 
     QTextBlock block = firstVisibleBlock();
@@ -65,7 +65,7 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
     while (block.isValid() && top <= event->rect().bottom()) {
         if (block.isVisible() && bottom >= event->rect().top()) {
             const QString number = QString::number(blockNumber + 1);
-            painter.drawText(0, top, m_lineNumberArea->width() - 6,
+            painter.drawText(0, top, m_gutter->width() - 6,
                              fontMetrics().height(),
                              Qt::AlignRight, number);
         }
@@ -79,17 +79,17 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
 
 void CodeEditor::setLineNumbersVisible(bool visible)
 {
-    if (m_lineNumbersVisible == visible)
+    if (m_gutterVisible == visible)
         return;
 
-    m_lineNumbersVisible = visible;
-    m_lineNumberArea->setVisible(visible);
-    updateLineNumberAreaWidth(0);
+    m_gutterVisible = visible;
+    m_gutter->setVisible(visible);
+    updateTextGutterWidth(0);
 }
 
 bool CodeEditor::lineNumbersVisible() const
 {
-    return m_lineNumbersVisible;
+    return m_gutterVisible;
 }
 
 void CodeEditor::resizeEvent(QResizeEvent *event)
@@ -97,27 +97,27 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
     QPlainTextEdit::resizeEvent(event);
 
     const QRect rect = contentsRect();
-    m_lineNumberArea->setGeometry(
-        QRect(rect.left(), rect.top(), lineNumberAreaWidth(), rect.height()));
+    m_gutter->setGeometry(
+        QRect(rect.left(), rect.top(), gutterWidth(), rect.height()));
 }
 
-void CodeEditor::updateLineNumberAreaWidth(int)
+void CodeEditor::updateTextGutterWidth(int)
 {
-    setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+    setViewportMargins(gutterWidth(), 0, 0, 0);
 }
 
-void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
+void CodeEditor::updateTextGutter(const QRect &rect, int dy)
 {
     if (dy != 0)
-        m_lineNumberArea->scroll(0, dy);
+        m_gutter->scroll(0, dy);
     else
-        m_lineNumberArea->update(0, rect.y(), m_lineNumberArea->width(), rect.height());
+        m_gutter->update(0, rect.y(), m_gutter->width(), rect.height());
 
     if (rect.contains(viewport()->rect()))
-        updateLineNumberAreaWidth(0);
+        updateTextGutterWidth(0);
 }
 
-void CodeEditor::highlightCurrentLine()
+void CodeEditor::applyActiveLineHighlight()
 {
     QList<QTextEdit::ExtraSelection> selections;
     if (!isReadOnly()) {

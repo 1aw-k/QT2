@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>170</height>
+    <width>620</width>
+    <height>190</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,14 +27,14 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QLineEdit" name="searchLineEdit">
+      <widget class="QLineEdit" name="queryInput">
        <property name="placeholderText">
         <string>输入要查找的文本</string>
        </property>
       </widget>
      </item>
      <item row="0" column="2" rowspan="2">
-      <widget class="QPushButton" name="nextButton">
+      <widget class="QPushButton" name="acceptSearchButton">
       <property name="minimumSize">
        <size>
         <width>190</width>
@@ -50,7 +50,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QCheckBox" name="caseSensitiveCheckBox">
+      <widget class="QCheckBox" name="matchCaseToggle">
        <property name="text">
         <string>区分大小写</string>
        </property>
@@ -63,14 +63,14 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QRadioButton" name="upRadioButton">
+         <widget class="QRadioButton" name="reverseDirectionOption">
           <property name="text">
            <string>向上(&amp;U)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="downRadioButton">
+         <widget class="QRadioButton" name="forwardDirectionOption">
           <property name="text">
            <string>向下(&amp;D)</string>
           </property>
@@ -83,7 +83,7 @@
       </widget>
      </item>
      <item row="2" column="2">
-      <widget class="QPushButton" name="cancelButton">
+      <widget class="QPushButton" name="dismissButton">
       <property name="minimumSize">
        <size>
         <width>90</width>

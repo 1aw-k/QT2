@@ -10,11 +10,11 @@ FindDialog::FindDialog(QWidget *parent)
     ui->setupUi(this);
     setModal(false);
 
-    connect(ui->nextButton, &QPushButton::clicked,
+    connect(ui->acceptSearchButton, &QPushButton::clicked,
             this, &FindDialog::requestNext);
-    connect(ui->cancelButton, &QPushButton::clicked,
+    connect(ui->dismissButton, &QPushButton::clicked,
             this, &QDialog::hide);
-    connect(ui->searchLineEdit, &QLineEdit::returnPressed,
+    connect(ui->queryInput, &QLineEdit::returnPressed,
             this, &FindDialog::requestNext);
 }
 
@@ -25,30 +25,30 @@ FindDialog::~FindDialog()
 
 QString FindDialog::searchText() const
 {
-    return ui->searchLineEdit->text();
+    return ui->queryInput->text();
 }
 
 void FindDialog::setSearchText(const QString &text)
 {
-    ui->searchLineEdit->setText(text);
-    ui->searchLineEdit->selectAll();
+    ui->queryInput->setText(text);
+    ui->queryInput->selectAll();
 }
 
 void FindDialog::focusSearchField()
 {
-    ui->searchLineEdit->setFocus();
-    ui->searchLineEdit->selectAll();
+    ui->queryInput->setFocus();
+    ui->queryInput->selectAll();
 }
 
 void FindDialog::requestNext()
 {
-    if (ui->searchLineEdit->text().isEmpty()) {
+    if (ui->queryInput->text().isEmpty()) {
         QMessageBox::information(this, tr("查找"), tr("请输入要查找的内容。"));
-        ui->searchLineEdit->setFocus();
+        ui->queryInput->setFocus();
         return;
     }
 
-    emit findRequested(ui->searchLineEdit->text(),
-                       ui->caseSensitiveCheckBox->isChecked(),
-                       ui->upRadioButton->isChecked());
+    emit findRequested(ui->queryInput->text(),
+                       ui->matchCaseToggle->isChecked(),
+                       ui->reverseDirectionOption->isChecked());
 }
