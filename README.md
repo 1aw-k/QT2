@@ -25,6 +25,8 @@
 
 - `AppIcons`：集中生成应用、新建、打开、保存、另存为和状态栏图标
 - `MainWindow`：菜单、工具栏、编辑区、状态栏及文件操作
+- `TextFileService`：统一处理文本编码、读取和原子写入
+- `SearchService`：封装连续查找、回绕和全部替换逻辑
 - `CodeEditor`：支持行号显示的 `QPlainTextEdit` 派生类
 - `FindDialog` / `ReplaceDialog`：查找与替换窗口
 - `AboutDialog`：开发者、学号、邮箱和版本信息展示
