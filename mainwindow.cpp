@@ -193,8 +193,12 @@ MainWindow::MainWindow(QWidget *parent)
     m_statusBarIconLabel = new QLabel(this);
     m_statusBarIconLabel->setPixmap(
         AppIcons::statusBarVisibilityIcon().pixmap(16, 16));
+    m_statusBarIconLabel->setFixedSize(20, 16);
+    m_statusBarIconLabel->setAlignment(Qt::AlignCenter);
+    m_statusBarIconLabel->setContentsMargins(0, 0, 4, 0);
     m_statusBarIconLabel->setToolTip(tr("状态栏"));
     statusBar()->addWidget(m_statusBarIconLabel);
+    statusBar()->setSizeGripEnabled(false);
 
     m_statusInfoLabel = new QLabel(this);
     m_statusEncodingLabel = new QLabel(tr("UTF-8"), this);
