@@ -733,7 +733,23 @@ void MainWindow::configureActionsAndAppearance()
     ui->actionStatusBar->setIcon(AppIcons::statusBarVisibilityIcon());
     ui->actionAbout->setIcon(AppIcons::applicationIcon());
 
-    ui->mainToolBar->setIconSize(QSize(22, 22));
+    ui->mainToolBar->setIconSize(QSize(36, 36));
+    ui->mainToolBar->setStyleSheet(
+        QStringLiteral(
+            "QToolBar {"
+            "  spacing: 8px;"
+            "  padding: 6px 10px;"
+            "}"
+            "QToolButton {"
+            "  min-width: 44px;"
+            "  min-height: 44px;"
+            "  padding: 4px;"
+            "}"
+            "QToolBar::separator {"
+            "  width: 2px;"
+            "  margin: 7px 8px;"
+            "  background: #d7dce2;"
+            "}"));
     ui->editor->setLineWrapMode(ui->actionWordWrap->isChecked()
                                     ? QPlainTextEdit::WidgetWidth
                                     : QPlainTextEdit::NoWrap);
